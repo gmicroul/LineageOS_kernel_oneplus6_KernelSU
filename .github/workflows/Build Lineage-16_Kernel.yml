@@ -47,7 +47,7 @@ jobs:
     - name: download clang and delete some AnyKernel3 code
       run: |
         mkdir clang-aosp
-        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android9-release/clang-r450784d.tar.gz
+        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android13-release/clang-r450784d.tar.gz
         tar -C clang-aosp -zxvf clang-r450784d.tar.gz
 
         rm -rf AnyKernel3/.git
