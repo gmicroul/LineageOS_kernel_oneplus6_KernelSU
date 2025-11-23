@@ -1,0 +1,71 @@
+name: Build Lineage-16 Kernel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout this repository
+      uses: actions/checkout@v3
+      with:
+        ref: main
+        path: repo
+
+    - name: Checkout kernel code
+      uses: actions/checkout@v3
+      with:
+        repository: LineageOS/android_kernel_oneplus_sdm845
+        ref: lineage-16
+        path: android_kernel_oneplus_sdm845
+
+    - name: Checkout AnyKernel3 code
+      uses: actions/checkout@v3
+      with:
+        ref: AnyKernel3
+        path: AnyKernel3
+
+    - name: Set up ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        max-size: 2G
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get upgrade
+        sudo apt-get install gcc-aarch64-linux-gnu
+        sudo apt-get install gcc-arm-linux-gnueabi
+
+    - name: modify code
+      run: |
+        cd android_kernel_oneplus_sdm845
+        cp ../repo/configs/* ./arch/arm64/configs
+
+    - name: download clang and delete some AnyKernel3 code
+      run: |
+        mkdir clang-aosp
+        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android9-release/clang-r450784d.tar.gz
+        tar -C clang-aosp -zxvf clang-r450784d.tar.gz
+
+        rm -rf AnyKernel3/.git
+
+    - name: Build Kernel
+      run: |
+        export PATH=$(pwd)/clang-aosp/bin/:$PATH
+        cd android_kernel_oneplus_sdm845
+        make O=out $KERNEL_DEFCONFIG
+        make -j$(nproc --all) O=out ARCH=arm64 CC="ccache clang" CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- LLVM=1
+        cp out/arch/arm64/boot/Image.gz-dtb ../AnyKernel3
+      env:
+        KERNEL_DEFCONFIG: "enchilada_Lineage-20_defconfig"
+        ARCH: arm64
+        SUBARCH: arm64
+
+    - name: Upload AnyKernel3
+      uses: actions/upload-artifact@v4
+      with:
+        name: AnyKernel3_Lineage-16
+        path: "AnyKernel3/*"
